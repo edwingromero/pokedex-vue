@@ -9,6 +9,7 @@
     "@nativescript/core": "^7.0.3",
     "@nativescript/theme": "^3.0.0",
     "axios": "^0.20.0",
+    "lodash": "^4.17.20",
     "nativescript-vue": "^2.8.1"
   },
   "devDependencies": {

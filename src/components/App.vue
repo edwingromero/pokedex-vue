@@ -2,8 +2,9 @@
   <Page>
     <ActionBar title="NativeScript-Vue Pokedex"/>
     <StackLayout backgroundColor="#3c495e">
-      <TextField v-model="textFieldValue" hint="Buscar un Pokemon" />
-      <ListView class="list-group" for="pokemon in pokedex" separatorColor="#e6e6e6" @itemTap="onItemTap">
+      <TextField v-model="filtro" hint="Buscar un Pokemon" />
+      <Label v-model="filtro" />
+      <ListView class="list-group" for="pokemon in filtroNombres" separatorColor="#e6e6e6" @itemTap="onItemTap">
         <v-template>
           <FlexboxLayout flexDirection="row" class="list-group-item">
             <Image :src="pokemon.sprite" class="thumb" />
@@ -18,6 +19,7 @@
 <script>
 import axios from 'axios/dist/axios';
 import Pokemon from './Pokemon';
+import _ from 'lodash'
 
 const POKE_API_BASE_URL =  "https://pokeapi.co/api/v2";
 
@@ -25,7 +27,8 @@ export default {
 
   data() {
     return {
-      pokedex: []
+      pokedex: [],
+      filtro:''
     }
   },
 
@@ -44,7 +47,11 @@ export default {
 
   computed:{
     filtroNombres:function(){
-      return this.pokedex;
+      var that = this;
+      return this.pokedex
+        .filter(item => {
+          return _.includes(item.name.toLowerCase(), this.filtro.toLowerCase()) //USANDO LODASH
+        })
     }
   },
 
