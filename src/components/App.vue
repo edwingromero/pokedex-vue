@@ -1,112 +1,101 @@
 <template>
-  <Page>
-    <ActionBar title="NativeScript-Vue Pokedex"/>
-    <StackLayout backgroundColor="#3c495e">
-      <TextField v-model="filtro" hint="Buscar un Pokemon" />
-      <Label v-model="filtro" />
-      <ListView class="list-group" for="pokemon in filtroNombres" separatorColor="#e6e6e6" @itemTap="onItemTap">
-        <v-template>
-          <FlexboxLayout flexDirection="row" class="list-group-item">
-            <Image :src="pokemon.sprite" class="thumb" />
-            <Label :text="pokemon.name" class="list-group-item-heading" style="width: 60%" />
-          </FlexboxLayout>
-        </v-template>
-      </ListView>
-    </StackLayout>
+  <Page actionBarHidden="true">
+    
+    <StackLayout verticalAlignment="center">
+      <Image src="~/assets/images/logo.png" width="150" class="m-b-30"></Image>
+      <Label class="h1 text-center"  text="Bienvenido" />
+      <StackLayout class="nt-input">
+        <Label text="Email" class="font-weight-bold m-b-5" />
+        <TextField v-model="email" />
+        <Label v-if="$v.email.$error && !$v.email.required" text="Es requerido" class="text-danger" />
+        <Label v-if="$v.email.$error && !$v.email.email" text="No un email valido" class="text-danger" />
+      </StackLayout>
+      <StackLayout class="nt-input">
+        <Label text="Contraseña" class="font-weight-bold m-b-5" />
+        <TextField v-model="contrasena" secure="true" />
+        <Label v-if="$v.contrasena.$error && !$v.contrasena.required" text="Es requerido" class="text-danger" />
+        <Label v-if="$v.contrasena.$error && !$v.contrasena.minLength" text="Mínimo 8 caracteres" class="text-danger" />
+      </StackLayout>
+      
+      <Button v-if="!disabledButton" class="-primary" text="Iniciar Sesión" @tap="iniciarSesion" />
+
+      <Button v-if="disabledButton" class="-primary" text="Procesando" />
+    </StackLayout> 
   </Page>
 </template>
 
 <script>
-import axios from 'axios/dist/axios';
-import Pokemon from './Pokemon';
-import _ from 'lodash'
-
-const POKE_API_BASE_URL =  "https://pokeapi.co/api/v2";
+import { required, minLength, email } from 'vuelidate/lib/validators'
+import axios from "axios/dist/axios";
+import {getString, setString, remove} from 'tns-core-modules/application-settings'
+import Home from './Home'
 
 export default {
-
   data() {
     return {
-      pokedex: [],
-      filtro:''
-    }
+      email: 'edwing8957@gmail.com',
+      contrasena:'12345678',
+      token: '',
+      disabledButton:false
+    };
   },
-
-  async mounted() {
-    const { data } = await axios.get('https://pokeapi.co/api/v2/pokemon/?limit=150');
-    this.pokedex = data.results.map((item) => {
-      const id = item.url.split('/')[6];
-      return {
-        id,
-        name: item.name,
-        sprite: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`
-      }
-    });
-
-  },
-
-  computed:{
-    filtroNombres:function(){
-      var that = this;
-      return this.pokedex
-        .filter(item => {
-          return _.includes(item.name.toLowerCase(), this.filtro.toLowerCase()) //USANDO LODASH
-        })
-    }
-  },
-
-  methods: {
-    onItemTap: async function (args) {
-      const id = args.item.id;
-      const { data: pokemonData } = await axios.get(`${POKE_API_BASE_URL}/pokemon/${id}`);
-      const { data: pokemonSpecieData } = await axios.get(`${POKE_API_BASE_URL}/pokemon-species/${id}`);
-
-      const { types } = pokemonData;
-      const { flavor_text_entries } = pokemonSpecieData;
-
-      const pokemon_types = types.map(({ slot, type }) => {
-        return {
-          "id": slot,
-          "name": type.name,
-          "classname": `TypeText ${type.name}`
-        }
-      });
-
-      const pokemon_description = flavor_text_entries.find(item => item.language.name === 'es').flavor_text;
-
-      this.$navigateTo(Pokemon, {
-        props: {
-          id,
-          name: args.item.name,
-          description: pokemon_description,
-          types: pokemon_types,
-          image: `https://img.pokemondb.net/artwork/vector/large/${args.item.name}.png`
-        }
-      });
+  validations: {
+    email: {
+      required,
+      email
     },
+    contrasena: {
+      required,
+      minLength: minLength(6)
+    }
   },
-
+  mounted() {
+    if(getString("token")!=''){
+      this.$navigateTo(Home)
+    }
+  },
+  methods: {
+    cerrarSesion () {
+      remove("token");
+    },
+    iniciarSesion(){
+      let vue = this;
+      vue.disabledButton = true;
+      vue.$v.$touch();
+      if (!this.$v.$invalid) {
+        axios.post('http://326c60f15708.ngrok.io/api/auth/login',{
+          email:vue.email,
+          password:vue.contrasena,
+          remember_me:true
+        })
+        .then(res => {
+          vue.disabledButton = false;
+          vue.token = res.data.access_token;
+          setString('token', vue.token);
+          this.$navigateTo(Home)
+        })
+        .catch(err => {
+          vue.disabledButton = false;
+          alert('error');
+        })
+      }
+    }
+  }
 }
 </script>
 
-<style scoped>
-ActionBar {
-  background-color: #53ba82;
-  color: #ffffff;
-}
+<style lang="scss">
+  .fondo{
+    background:linear-gradient(to bottom, #398994,#337fc7);
+  }
 
-.list-group-item {
-  background-color: #FFF;
-  align-items: center;
-}
-
-.thumb {
-  width: 100;
-}
-
-.list-group-item-heading {
-  color: #333;
-  font-size: 20;
-  margin-left: 20;
-}
+  .titulo{
+    font-size: 20px;
+    text-align: center;
+  }
+  .boton-primary{
+    background-color: #337fc7;
+    color:white;
+    border-radius:20px;
+  }
 </style>
